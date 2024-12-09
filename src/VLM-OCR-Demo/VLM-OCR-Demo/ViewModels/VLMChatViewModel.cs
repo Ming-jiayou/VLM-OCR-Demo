@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.IO;
 using dotenv.net;
+using Prism.Mvvm;
+using Prism.Commands;
 
 namespace VLM_OCR_Demo.ViewModels
 {

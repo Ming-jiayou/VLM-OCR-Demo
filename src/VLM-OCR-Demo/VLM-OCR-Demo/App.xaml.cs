@@ -3,6 +3,8 @@ using System.Configuration;
 using System.Data;
 using System.Windows;
 using VLM_OCR_Demo.Views;
+using Prism.Unity;
+using Prism.Ioc;
 
 namespace VLM_OCR_Demo
 {
