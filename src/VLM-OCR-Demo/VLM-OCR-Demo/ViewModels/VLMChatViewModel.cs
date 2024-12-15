@@ -23,9 +23,11 @@ namespace VLM_OCR_Demo.ViewModels
             AskAICommand = new DelegateCommand(async () => await ExecuteAskAICommand());
             AskAIText = "请仅输出识别的文本，不要包含任何其他信息。请以最简洁的方式输出结果，不要添加任何额外内容。纯文本格式即可。";
             DotEnv.Load();
-            var envVars = DotEnv.Read();
-            SiliconCloudAPIKey = envVars["SILICON_CLOUD_API_KEY"];
+            envVars = DotEnv.Read();
+            APIKey = envVars["APIKey"];
         }
+
+        IDictionary<string, string>? envVars;
 
         private string? _selectedFilePath;
         public string? SelectedFilePath
@@ -50,7 +52,7 @@ namespace VLM_OCR_Demo.ViewModels
 
         public List<string> VLMOptions { get; set; } = new List<string> { "Pro/OpenGVLab/InternVL2-8B", "OpenGVLab/InternVL2-26B",
                                                                           "OpenGVLab/InternVL2-Llama3-76B","Qwen/Qwen2-VL-72B-Instruct",
-                                                                          "Pro/Qwen/Qwen2-VL-7B-Instruct","TeleAI/TeleMM"};
+                                                                          "Pro/Qwen/Qwen2-VL-7B-Instruct","glm-4v-flash"};
         private string? _selectedVLM;
         public string? SelectedVLM
         {
@@ -58,7 +60,7 @@ namespace VLM_OCR_Demo.ViewModels
             set { SetProperty(ref _selectedVLM, value); }
         }
 
-        public string? SiliconCloudAPIKey { get; set; }
+        public string? APIKey { get; set; }
         public ICommand SelectImageCommand { get; private set; }
         public ICommand AskAICommand { get; private set; }
 
@@ -89,14 +91,40 @@ namespace VLM_OCR_Demo.ViewModels
             {
                 SelectedVLM = "Pro/OpenGVLab/InternVL2-8B";
             }
-            IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
-            kernelBuilder.AddOpenAIChatCompletion(
-                modelId: SelectedVLM,
-                apiKey: SiliconCloudAPIKey,
-                endpoint: new Uri("https://api.siliconflow.cn/v1")
-            );
-            Kernel kernel = kernelBuilder.Build();
+            
+            if(envVars == null)
+            {
+                DotEnv.Load();
+                envVars = DotEnv.Read();
+            }
+            string platform = envVars["Platform"];
 
+            Kernel kernel;
+
+            switch (platform)
+            {
+                case "SiliconCloud":
+                    IKernelBuilder kernelBuilder1 = Kernel.CreateBuilder();
+                    kernelBuilder1.AddOpenAIChatCompletion(
+                        modelId: SelectedVLM,
+                        apiKey: APIKey,
+                        endpoint: new Uri("https://api.siliconflow.cn/v1")
+                    );
+                    kernel = kernelBuilder1.Build();
+                    break;
+                case "ZhiPu":
+                    IKernelBuilder kernelBuilder2 = Kernel.CreateBuilder();
+                    kernelBuilder2.AddOpenAIChatCompletion(
+                        modelId: SelectedVLM,
+                        apiKey: APIKey,
+                        endpoint: new Uri("https://open.bigmodel.cn/api/paas/v4")
+                    );
+                    kernel = kernelBuilder2.Build();
+                    break;
+                default:
+                    throw new InvalidOperationException("Unsupported platform");
+            }
+        
             var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
             if (SelectedFilePath == null)
